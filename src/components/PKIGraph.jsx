@@ -80,6 +80,7 @@ export default function PKIGraph({
   darkMode = false
 }) {
   const graphRef = useRef();
+  const wasBeginnerMode = useRef(beginnerMode);
 
   // Build graph data based on mode
   const graphData = useMemo(() => {
@@ -121,18 +122,26 @@ export default function PKIGraph({
   }, [beginnerMode, selectedFlow, width, height, darkMode]);
 
   useEffect(() => {
-    if (graphRef.current) {
-      if (beginnerMode) {
-        graphRef.current.d3Force('charge').strength(-100);
-        graphRef.current.d3Force('link').distance(100);
-        setTimeout(() => {
-          graphRef.current.centerAt(width / 2, height / 2, 500);
-          graphRef.current.zoom(1.2, 500);
-        }, 100);
-      } else {
-        graphRef.current.d3Force('charge').strength(-400);
-        graphRef.current.d3Force('link').distance(120);
-      }
+    if (!graphRef.current) return;
+    const leavingBeginnerMode = wasBeginnerMode.current && !beginnerMode;
+    wasBeginnerMode.current = beginnerMode;
+
+    if (beginnerMode) {
+      graphRef.current.d3Force('charge').strength(-100);
+      graphRef.current.d3Force('link').distance(100);
+      const timer = setTimeout(() => {
+        graphRef.current?.centerAt(width / 2, height / 2, 500);
+        graphRef.current?.zoom(1.2, 500);
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+
+    graphRef.current.d3Force('charge').strength(-400);
+    graphRef.current.d3Force('link').distance(120);
+    if (leavingBeginnerMode) {
+      // The full graph is laid out around the origin, not the canvas center.
+      graphRef.current.centerAt(0, 0, 500);
+      graphRef.current.zoom(1, 500);
     }
   }, [beginnerMode, width, height, selectedFlow]);
 
